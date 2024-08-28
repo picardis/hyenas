@@ -16,14 +16,20 @@ calc_tfm <- function(x) {
   
   # x must be a data.frame with columns x, y (UTM coordinates), timestamp,
   # id, burst_
-  sp::coordinates(x) <- c("x", "y")
-  sp::proj4string(x) <- sp::CRS("+init=epsg:32636")
+  # sp::coordinates(x) <- c("x", "y")
+  # sp::proj4string(x) <- sp::CRS("+init=epsg:32636")
   
-  ll <- sp::spTransform(x, sp::CRS("+init=epsg:4326")) %>% 
+  x <- st_as_sf(x, coords = c("x", "y"))
+  st_crs(x) <- 32636
+  ll <- st_transform(x, crs = 4326) 
+  ll <- st_coordinates(ll)
+  x <- x %>% 
     as.data.frame() %>% 
-    rename(longitude = x, latitude = y)
+    cbind.data.frame(ll) %>% 
+    dplyr::select(-geometry) %>% 
+    rename(x = X, y = Y)
   
-  res <- ll %>% 
+  res <- x %>% 
     as.data.frame() %>% 
     mutate(
       # Establish reference dates for sunset and sunrise
@@ -47,13 +53,13 @@ calc_tfm <- function(x) {
         lubridate::hour(timestamp) >= 12 ~ timestamp + lubridate::days(1),
         lubridate::hour(timestamp) < 12 ~ timestamp)) %>% 
     # Calculate sunrise and sunset times
-    mutate(sunrise = maptools::sunriset(crds = as.matrix(.[, c("longitude", 
-                                                               "latitude")]), 
+    mutate(sunrise = maptools::sunriset(crds = as.matrix(.[, c("x", 
+                                                               "y")]), 
                                         dateTime = rise_date,
                                         direction = "sunrise",
                                         POSIXct.out = TRUE)$time) %>%  
-    mutate(sunset = maptools::sunriset(crds = as.matrix(.[, c("longitude", 
-                                                              "latitude")]), 
+    mutate(sunset = maptools::sunriset(crds = as.matrix(.[, c("x", 
+                                                              "y")]), 
                                        dateTime = set_date,
                                        direction = "sunset",
                                        POSIXct.out = TRUE)$time) %>% 
@@ -64,12 +70,22 @@ calc_tfm <- function(x) {
                                          units = "hours", tz = "Israel")) %>% 
     dplyr::select(-set_date, -rise_date, -sunset, -sunrise, -midnight)
   
-  sp::coordinates(res) <- c("longitude", "latitude")
-  sp::proj4string(res) <- sp::CRS("+init=epsg:4326")
-  
-  res <- sp::spTransform(res, sp::CRS("+init=epsg:32636")) %>% 
+  res <- st_as_sf(res, coords = c("x", "y"))
+  st_crs(res) <- 4326
+  res <- st_transform(res, crs = 32636) 
+  xy <- st_coordinates(res)
+  res <- res %>% 
     as.data.frame() %>% 
-    rename(x = longitude, y = latitude)
+    cbind.data.frame(xy) %>% 
+    dplyr::select(-geometry) %>% 
+    rename(x = X, y = Y)
+  # 
+  # sp::coordinates(res) <- c("longitude", "latitude")
+  # sp::proj4string(res) <- sp::CRS("+init=epsg:4326")
+  # 
+  # res <- sp::spTransform(res, sp::CRS("+init=epsg:32636")) %>% 
+  #   as.data.frame() %>% 
+  #   rename(x = longitude, y = latitude)
   
   return(res)
 } 
