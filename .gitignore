@@ -1,0 +1,7 @@
+.Rproj.user/
+input/
+output/
+misc_code/
+.Rhistory
+*.tiff
+*.txt
