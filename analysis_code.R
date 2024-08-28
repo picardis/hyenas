@@ -429,6 +429,8 @@ ggpubr::ggarrange(dph, dpn, nsd, nrow = 1)
 # ggsave("output/movement-summaries_2021-08-24.tiff",
 #        compression = "lzw", width = 10, height = 5, dpi = 300, scale = 0.7)
 
+# Fit HMM ####
+
 # Choose initial values
 
 source("gamma_pars.R")
